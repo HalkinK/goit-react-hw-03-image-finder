@@ -8,6 +8,7 @@ import Button from "./components/Button/Button";
 import Loader from "react-loader-spinner";
 import "react-loader-spinner/dist/loader/css/react-spinner-loader.css";
 import ApiServise from "./services/ApiService";
+import Modal from "./components/Modal/Modal";
 
 const Status = {
   IDLE: "idle",
@@ -22,7 +23,8 @@ class App extends React.Component {
     page: 1,
     gallery: [],
     status: "idle",
-    openModal: false,
+    showModal: false,
+    currentImage: "",
   };
 
   componentDidUpdate(prevProps, prevState) {
@@ -30,44 +32,34 @@ class App extends React.Component {
     const nextQuery = this.state.searchQuery;
 
     if (prevQuery !== nextQuery) {
+      this.setState({ status: "pending" });
       this.renderGallery();
     }
-    // const API_KEY = "21946293-ddb661a7c3de00e68a212d36c";
-    // const url =
-    //   "https://pixabay.com/api/?image_type=photo&orientation=horizontal";
-
-    // const { searchQuery, page, gallery } = this.state;
-
-    // if (searchQuery !== prevState.searchQuery || page !== prevState.page) {
-    //   fetch(`${url}&q=${searchQuery}&page=${page}&per_page=12&key=${API_KEY}`)
-    //     .then((res) => res.json())
-    //     .then(({ hits }) =>
-    //       this.setState({ gallery: [...prevState.gallery, ...hits] })
-    //     )
-    //     .then(() => {
-    //       this.loaderToggle();
-    //       if (gallery.length > 0) {
-    //         window.scrollTo({
-    //           top: document.documentElement.scrollHeight,
-    //           behavior: "smooth",
-    //         });
-    //       }
-    //     });
-    // }
   }
 
   renderGallery = () => {
     const { searchQuery, page } = this.state;
 
     ApiServise.fetchImages(searchQuery, page)
-      .then((responce) =>
+      .then((responce) => {
+        // this.loaderToggle();
+
         this.setState((prevState) => ({
           gallery: [...prevState.gallery, ...responce.hits],
           page: prevState.page + 1,
-        }))
-      )
+        }));
+      })
       .catch((error) => this.setState({ error, status: Status.REJECTED }))
-      .finally(() => this.setState({ status: Status.RESOLVED }));
+      .finally(() => {
+        // this.loaderToggle();
+
+        this.setState({ status: Status.RESOLVED });
+
+        window.scrollTo({
+          top: document.documentElement.scrollHeight,
+          behavior: "smooth",
+        });
+      });
   };
 
   handleFormSubmit = (searchQuery) => {
@@ -84,15 +76,32 @@ class App extends React.Component {
   //   }));
   // };
 
-  loaderToggle = () => {
-    this.setState((prevState) => ({
-      loader: !prevState.loader,
+  // loaderToggle = () => {
+  //   this.setState((prevState) => ({
+  //     loader: !prevState.loader,
+  //   }));
+  // };
+
+  toggleModal = () => {
+    this.setState(({ showModal }) => ({
+      showModal: !showModal,
     }));
+  };
+
+  onImageClick = (e) => {
+    if (e.target.nodeName !== "IMG") {
+      return;
+    }
+    this.setState({
+      currentImage: e.target.dataset.img,
+    });
+
+    this.toggleModal();
   };
 
   render() {
     return (
-      <>
+      <div className="App">
         <Serchbar
           onSubmit={this.handleFormSubmit}
           value={this.state.searchQuery}
@@ -101,21 +110,33 @@ class App extends React.Component {
           <Loader
             type="ThreeDots"
             color="#00BFFF"
-            height={100}
-            width={100}
-            timeout={1000} //3 secs
+            height={200}
+            width={200}
+            timeout={3000} //3 secs
           />
+        )}
+        {this.state.status === Status.REJECTED && (
+          <h1>{"Something went wrong"}</h1>
         )}
         {this.state.status === Status.RESOLVED && (
           <>
-            <ImageGallery gallery={this.state.gallery} />
+            <ImageGallery
+              gallery={this.state.gallery}
+              onImageClick={this.onImageClick}
+            />
 
             <Button onClick={this.renderGallery} text={"Load more"} />
           </>
         )}
+        {this.state.showModal && (
+          <Modal
+            onClose={this.toggleModal}
+            imageForModal={this.state.currentImage}
+          />
+        )}
 
         <ToastContainer position="top-center" autoClose={3000} />
-      </>
+      </div>
     );
   }
 }

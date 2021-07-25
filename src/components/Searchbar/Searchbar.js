@@ -1,9 +1,14 @@
 import React from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import PropTypes from "prop-types";
 
 class Searchbar extends React.Component {
   state = { searchQuery: "" };
+
+  static propTypes = {
+    onSubmit: PropTypes.func.isRequired,
+  };
 
   handleQueryChange = (event) => {
     this.setState({ searchQuery: event.currentTarget.value.toLowerCase() });
